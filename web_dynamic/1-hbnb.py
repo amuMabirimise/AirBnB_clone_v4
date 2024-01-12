@@ -1,47 +1,47 @@
 #!/usr/bin/python3
 """ Starting a Flash Web Application """
 from models import storage
-from models.state import State
-from models.city import City
+from models.base_model import Base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from os import getenv
+from models.user import User
 from models.amenity import Amenity
+from models.city import City
 from models.place import Place
-from os import environ
-from flask import Flask, render_template
+from models.review import Review
+from models.state import State
+from flask import Flask
+from flask import render_template
 import uuid
 app = Flask(__name__)
-# app.jinja_env.trim_blocks = True
-# app.jinja_env.lstrip_blocks = True
+
+
+@app.route('/1-hbnb/')
+def hbnb():
+    states = storage.all("State").values()
+    amenities = storage.all("Amenity").values()
+    places_tmp = storage.all("Place").values()
+    owners = storage.all("User")
+    places = []
+    cache_id = uuid.uuid4();
+
+    for k, v in owners.items():
+        for place in places_tmp:
+            if k == place.user_id:
+                places.append(["{} {}".format(
+                    v.first_name, v.last_name), place])
+    places.sort(key=lambda x: x[1].name)
+    return render_template("1-hbnb.html",
+                           amenities=amenities, result=states, places=places,
+                           cache_id=cache_id)
 
 
 @app.teardown_appcontext
-def close_db(error):
-    """ Removing the current SQLAlchemy Session """
+def close_session(exception):
+    """Removing the db session or save file"""
     storage.close()
 
 
-@app.route('/1-hbnb/', strict_slashes=False)
-def hbnb():
-    """ HBNB is lookinf alive! """
-    states = storage.all(State).values()
-    states = sorted(states, key=lambda k: k.name)
-    st_ct = []
-
-    for state in states:
-        st_ct.append([state, sorted(state.cities, key=lambda k: k.name)])
-
-    amenities = storage.all(Amenity).values()
-    amenities = sorted(amenities, key=lambda k: k.name)
-
-    places = storage.all(Place).values()
-    places = sorted(places, key=lambda k: k.name)
-
-    return render_template('1-hbnb.html',
-                           states=st_ct,
-                           amenities=amenities,
-                           places=places,
-                           cache_id=uuid.uuid4())
-
-
 if __name__ == "__main__":
-    """ Main of a Function """
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host="0.0.0.0", port="5000")
